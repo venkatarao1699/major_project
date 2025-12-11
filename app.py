@@ -1,33 +1,32 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
-from sklearn.tree import ExtraTreeRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
 from flask import Flask, render_template, request
 import os
 
 app = Flask(__name__)
 
 # -----------------------------------------------------------
-# 🔥 TRAIN MODEL ONCE WHEN THE APP STARTS
+# LOAD & TRAIN MODEL ONCE (Railway Safe)
 # -----------------------------------------------------------
 
-df = pd.read_csv("stress_detection_IT_professionals_dataset.csv")
+df = pd.read_csv("8fed6a71-0228-49e8-93e5-d86dfa9feb7d.csv")
 
-# Preprocess dataset
-x = df.drop("Stress Level", axis=1)
-y = df["Stress Level"]
+# Correct columns:
+# ['Heart_Rate', 'Skin_Conductivity', 'Hours_Worked', 'Stress_Level', 'Emails_Sent', 'Meetings_Attended']
 
-# Split dataset
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
+X = df.drop("Stress_Level", axis=1)
+y = df["Stress_Level"]
 
-# Use a model (RandomForest is good for this)
+# Train-test split
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train model
 model = RandomForestRegressor()
 model.fit(x_train, y_train)
 
-print("Model trained successfully on startup!")
+print("Model trained successfully using uploaded dataset!")
 
 
 # -----------------------------------------------------------
@@ -42,31 +41,34 @@ def index():
 @app.route("/prediction", methods=["GET", "POST"])
 def prediction():
     if request.method == "POST":
+        # Collect inputs (names must match your HTML form names)
+        heart = float(request.form["heart"])
+        skin = float(request.form["skin"])
+        hours = float(request.form["hours"])
+        emails = float(request.form["emails"])
+        meetings = float(request.form["meetings"])
 
-        # Collect form inputs
-        age = float(request.form["age"])
-        work_hours = float(request.form["work_hours"])
-        sleep_hours = float(request.form["sleep_hours"])
-        anxiety = float(request.form["anxiety"])
-        workload = float(request.form["workload"])
+        # Prepare input
+        input_data = np.array([[heart, skin, hours, emails, meetings]])
 
-        # Prepare input features
-        input_features = np.array([[age, work_hours, sleep_hours, anxiety, workload]])
+        # Reorder to match X column order
+        # Columns: Heart_Rate, Skin_Conductivity, Hours_Worked, Emails_Sent, Meetings_Attended
+        input_data = np.array([[heart, skin, hours, emails, meetings]])
 
-        # Predict
-        stress_level = model.predict(input_features)[0]
+        # Prediction
+        stress_pred = model.predict(input_data)[0]
 
-        # Categorize stress level
-        if stress_level <= 40:
-            category = "Low Stress - Stay hydrated and take short breaks. 🍵"
-        elif stress_level <= 60:
-            category = "Moderate Stress - Try relaxation exercises. 🧘"
-        elif stress_level <= 80:
-            category = "High Stress - Slow down and manage workload. ⚠️"
+        # Category logic
+        if stress_pred <= 30:
+            category = "Low Stress 😌"
+        elif stress_pred <= 50:
+            category = "Moderate Stress 🙂"
+        elif stress_pred <= 70:
+            category = "High Stress 😥"
         else:
-            category = "Severe Stress - Take immediate action; seek support. 🚨"
+            category = "Severe Stress 🚨"
 
-        msg = f"The predicted stress level is {stress_level:.2f}%. {category}"
+        msg = f"Predicted Stress Level: {stress_pred:.2f} • {category}"
 
         return render_template("prediction.html", msg=msg)
 
@@ -74,7 +76,7 @@ def prediction():
 
 
 # -----------------------------------------------------------
-# 🔥 RUN APP ON RAILWAY PORT
+# RUN ON RAILWAY PORT
 # -----------------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
