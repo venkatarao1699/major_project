@@ -11,7 +11,7 @@ app = Flask(__name__)
 # LOAD & TRAIN MODEL ONCE (Railway Safe)
 # -----------------------------------------------------------
 
-df = pd.read_csv(""stress_detection_IT_professionals_dataset.csv"")
+df = pd.read_csv("stress_detection_IT_professionals_dataset.csv")
 
 # Correct columns:
 # ['Heart_Rate', 'Skin_Conductivity', 'Hours_Worked', 'Stress_Level', 'Emails_Sent', 'Meetings_Attended']
